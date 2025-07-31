@@ -188,25 +188,25 @@ export default function TerminalStyleChat({ files, setFiles, selected, setSelect
       {/* Chat Messages Area */}
       <div 
         ref={chatContainerRef}
-        className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0"
+        className="flex-1 overflow-y-auto p-3 space-y-2 min-h-0"
         onClick={() => inputRef.current?.focus()}
       >
         {messages.map((message, index) => (
           <div
             key={index}
-            className={`flex gap-3 ${
+            className={`flex gap-2 ${
               message.type === 'user' ? 'justify-end' : 'justify-start'
-            }`}
+            } mb-3`}
           >
             {message.type !== 'user' && (
               <div className="flex-shrink-0">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
                   message.type === 'assistant' 
-                    ? 'bg-gradient-to-r from-blue-500 to-purple-600' 
+                    ? 'bg-blue-600' 
                     : 'bg-red-500'
                 }`}>
                   {message.type === 'assistant' ? (
-                    <HiSparkles className="w-4 h-4 text-white" />
+                    <HiSparkles className="w-3 h-3 text-white" />
                   ) : (
                     <span className="text-white text-xs font-bold">!</span>
                   )}
@@ -214,53 +214,45 @@ export default function TerminalStyleChat({ files, setFiles, selected, setSelect
               </div>
             )}
 
-            <div className={`flex flex-col max-w-[80%] ${
+            <div className={`flex flex-col max-w-[85%] ${
               message.type === 'user' ? 'items-end' : 'items-start'
             }`}>
-              <div className={`rounded-2xl px-4 py-2.5 ${
+              <div className={`rounded-lg px-3 py-2 ${
                 message.type === 'user' 
                   ? 'bg-blue-600 text-white' 
                   : message.type === 'assistant'
                   ? 'bg-slate-800 text-slate-100'
                   : 'bg-red-900/20 text-red-400 border border-red-800'
               }`}>
-                <p className="text-sm whitespace-pre-wrap break-words">
+                <p className="text-sm whitespace-pre-wrap break-words leading-relaxed">
                   {message.content}
                 </p>
               </div>
-              <span className="text-xs text-slate-500 mt-1 px-2">
+              <span className="text-xs text-slate-500 mt-1 px-1">
                 {formatTime(message.timestamp)}
               </span>
             </div>
 
             {message.type === 'user' && (
               <div className="flex-shrink-0">
-                <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center">
-                  <HiUser className="w-4 h-4 text-slate-300" />
+                <div className="w-6 h-6 rounded-full bg-slate-700 flex items-center justify-center">
+                  <HiUser className="w-3 h-3 text-slate-300" />
                 </div>
               </div>
             )}
           </div>
         ))}
 
-        {/* Loading indicator */}
+        {/* Simple loading indicator */}
         {isProcessing && (
-          <div className="flex gap-3 justify-start">
+          <div className="flex gap-2 justify-start">
             <div className="flex-shrink-0">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center">
-                <HiSparkles className="w-4 h-4 text-white" />
+              <div className="w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center">
+                <HiSparkles className="w-3 h-3 text-white" />
               </div>
             </div>
-            <div className="bg-slate-800 rounded-2xl px-4 py-3 max-w-[80%]">
-              <div className="flex items-center gap-2">
-                <HiBolt className="w-4 h-4 text-blue-400 animate-spin" />
-                <span className="text-sm text-slate-300">Claude sedang mengetik</span>
-                <div className="flex gap-1">
-                  <div className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                  <div className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                  <div className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
-                </div>
-              </div>
+            <div className="bg-slate-800 rounded-lg px-3 py-2 max-w-[80%]">
+              <span className="text-xs text-slate-400">Memproses...</span>
             </div>
           </div>
         )}
@@ -268,21 +260,21 @@ export default function TerminalStyleChat({ files, setFiles, selected, setSelect
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input Area */}
-      <div className="border-t border-slate-800 bg-slate-900 p-4 flex-shrink-0">
-        <div className="flex gap-3 items-end">
-          <div className="flex-1 bg-slate-800 rounded-2xl border border-slate-700 focus-within:border-blue-500 transition-colors">
+      {/* Compact Input Area */}
+      <div className="border-t border-slate-800 bg-slate-900 p-3 flex-shrink-0">
+        <div className="flex gap-2 items-end">
+          <div className="flex-1 bg-slate-800 rounded-lg border border-slate-700 focus-within:border-blue-500 transition-colors">
             <textarea
               ref={inputRef}
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Ketik pesan atau perintah..."
-              className="w-full bg-transparent text-white placeholder-slate-400 outline-none p-3 resize-none max-h-32"
+              placeholder="Ketik pesan..."
+              className="w-full bg-transparent text-white placeholder-slate-400 outline-none p-2 resize-none max-h-24 text-sm"
               rows="1"
               disabled={isProcessing}
               style={{
-                minHeight: '44px',
+                minHeight: '36px',
                 height: 'auto'
               }}
               onInput={(e) => {
@@ -294,13 +286,13 @@ export default function TerminalStyleChat({ files, setFiles, selected, setSelect
           <button
             onClick={handleSend}
             disabled={isProcessing || !input.trim()}
-            className={`p-3 rounded-full transition-all ${
+            className={`p-2 rounded-lg transition-all ${
               isProcessing || !input.trim()
                 ? 'bg-slate-700 text-slate-500 cursor-not-allowed'
-                : 'bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl'
+                : 'bg-blue-600 hover:bg-blue-700 text-white'
             }`}
           >
-            <HiPaperAirplane className="w-5 h-5" />
+            <HiPaperAirplane className="w-4 h-4" />
           </button>
         </div>
         <div className="flex items-center gap-4 mt-2 text-xs text-slate-500">
