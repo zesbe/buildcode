@@ -42,7 +42,12 @@ export default function TerminalStyleChat({ files, setFiles, selected, setSelect
           role: 'assistant'
         }]);
       } else {
-        setMessages(chatHistory);
+        // Ensure timestamps are Date objects when loading from storage
+        const messagesWithDates = chatHistory.map(msg => ({
+          ...msg,
+          timestamp: msg.timestamp instanceof Date ? msg.timestamp : new Date(msg.timestamp || Date.now())
+        }));
+        setMessages(messagesWithDates);
       }
     }
   }, [currentChatSession]);

@@ -225,7 +225,13 @@ export default function ChatHistory({ isOpen, onClose, onSwitchChat, currentSess
                         <span>•</span>
                         <span>{session.updatedAt ? new Date(session.updatedAt).toLocaleDateString() : '--'}</span>
                         <span>•</span>
-                        <span>{session.updatedAt ? new Date(session.updatedAt).toLocaleTimeString() : '--:--'}</span>
+                        <span>{session.updatedAt ? (() => {
+                          try {
+                            return new Date(session.updatedAt).toLocaleTimeString();
+                          } catch (e) {
+                            return '--:--';
+                          }
+                        })() : '--:--'}</span>
                       </div>
                     </div>
                     
