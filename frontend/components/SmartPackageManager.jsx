@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { HiCube, HiXMark, HiPlus, HiTrash, HiDownload, HiSparkles } from 'react-icons/hi2';
+import { HiCube, HiXMark, HiPlus, HiTrash, HiArrowDownTray, HiSparkles } from 'react-icons/hi2';
 import { detectDependencies, generatePackageJson, getSuggestedDependencies, commonDependencies } from '../utils/dependencyDetector';
 
 export default function SmartPackageManager({ files, isOpen, onClose, showNotification, onAddFile }) {
@@ -264,7 +264,7 @@ export default function SmartPackageManager({ files, isOpen, onClose, showNotifi
                 onClick={generateAndDownloadPackageJson}
                 className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
               >
-                <HiDownload className="w-4 h-4" />
+                <HiArrowDownTray className="w-4 h-4" />
                 Generate package.json
               </button>
             </div>

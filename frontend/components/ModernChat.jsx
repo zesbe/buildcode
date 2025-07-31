@@ -1,18 +1,13 @@
 import React, { useState, useRef, useEffect } from "react";
-import { HiPaperAirplane, HiSparkles, HiUser, HiBolt } from "react-icons/hi2";
+import { HiPaperAirplane, HiSparkles, HiUser, HiBolt, HiChatBubbleLeftEllipsis } from "react-icons/hi2";
 import { chatClaude } from "../utils/claudeApi";
 import { parseAICommand, executeAICommands } from "../utils/aiFileActions";
 import { smartFileCreation } from "../utils/advancedFileOperations";
+import { chatStorage } from "../utils/chatStorage";
 
-export default function TerminalStyleChat({ files, setFiles, selected, setSelected, showNotification, folders, setFolders, setExpandedFolders, setOpenTabs }) {
+export default function TerminalStyleChat({ files, setFiles, selected, setSelected, showNotification, folders, setFolders, setExpandedFolders, setOpenTabs, currentChatSession, onSwitchChatSession, onShowChatHistory }) {
   const [input, setInput] = useState('');
-  const [messages, setMessages] = useState([
-    {
-      type: 'assistant',
-      content: 'Halo! 👋 Saya Claude, asisten AI Anda. Saya siap membantu dengan coding, membuat file, atau menjawab pertanyaan Anda.',
-      timestamp: new Date()
-    }
-  ]);
+  const [messages, setMessages] = useState([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [selectedModel, setSelectedModel] = useState("claude-sonnet-4-20250514");
   const inputRef = useRef(null);
@@ -34,6 +29,36 @@ export default function TerminalStyleChat({ files, setFiles, selected, setSelect
     }
   }, []);
 
+  // Load chat history when session changes
+  useEffect(() => {
+    if (currentChatSession) {
+      const chatHistory = chatStorage.loadChatHistory();
+      if (chatHistory.length === 0) {
+        // Set default welcome message for new sessions
+        setMessages([{
+          type: 'assistant',
+          content: 'Halo! 👋 Saya Claude, asisten AI Anda. Saya siap membantu dengan coding, membuat file, atau menjawab pertanyaan Anda.',
+          timestamp: new Date(),
+          role: 'assistant'
+        }]);
+      } else {
+        setMessages(chatHistory);
+      }
+    }
+  }, [currentChatSession]);
+
+  // Save chat history whenever messages change
+  useEffect(() => {
+    if (messages.length > 0 && currentChatSession) {
+      // Convert messages to proper format and save
+      const formattedMessages = messages.map(msg => ({
+        ...msg,
+        role: msg.type === 'user' ? 'user' : 'assistant'
+      }));
+      chatStorage.saveChatHistory(formattedMessages);
+    }
+  }, [messages, currentChatSession]);
+
   const handleSend = async () => {
     const trimmedInput = input.trim();
     if (!trimmedInput || isProcessing) return;
@@ -42,7 +67,8 @@ export default function TerminalStyleChat({ files, setFiles, selected, setSelect
     const userMessage = {
       type: 'user',
       content: trimmedInput,
-      timestamp: new Date()
+      timestamp: new Date(),
+      role: 'user'
     };
     setMessages(prev => [...prev, userMessage]);
     setInput('');
@@ -75,7 +101,8 @@ export default function TerminalStyleChat({ files, setFiles, selected, setSelect
       setMessages(prev => [...prev, {
         type: 'assistant',
         content: aiResponse,
-        timestamp: new Date()
+        timestamp: new Date(),
+        role: 'assistant'
       }]);
 
       // Auto-execute file operations if AI suggests them
@@ -88,7 +115,8 @@ export default function TerminalStyleChat({ files, setFiles, selected, setSelect
       setMessages(prev => [...prev, {
         type: 'error',
         content: `Error: ${error.message}\n\nPastikan API key Anda sudah benar.`,
-        timestamp: new Date()
+        timestamp: new Date(),
+        role: 'assistant'
       }]);
     }
 
@@ -121,10 +149,19 @@ export default function TerminalStyleChat({ files, setFiles, selected, setSelect
             <h3 className="font-semibold text-white text-sm">Claude AI Assistant</h3>
             <div className="flex items-center gap-2 text-xs text-slate-400">
               <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-              <span>Online</span>
+              <span>Online • {messages.length} messages</span>
             </div>
           </div>
         </div>
+        
+        {/* Chat History Button */}
+        <button
+          onClick={onShowChatHistory}
+          className="p-2 text-slate-400 hover:text-blue-400 hover:bg-slate-800 rounded-lg transition-colors"
+          title="Chat History"
+        >
+          <HiChatBubbleLeftEllipsis className="w-4 h-4" />
+        </button>
         
         <select 
           value={selectedModel}

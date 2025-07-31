@@ -9,11 +9,20 @@ import TabBar from "../components/TabBar";
 import PackageManager from "../components/PackageManager";
 import LivePreview from "../components/LivePreview";
 import FileUpload from "../components/FileUpload";
+import ChatHistory from "../components/ChatHistory";
 
 // Dynamic import to prevent SSR issues
 const CodeRunner = dynamic(() => import("../components/CodeRunner"), {
   ssr: false,
   loading: () => <div className="p-4 text-center text-slate-400">Loading Code Runner...</div>
+});
+const SmartPackageManager = dynamic(() => import("../components/SmartPackageManager"), {
+  ssr: false,
+  loading: () => <div className="p-4 text-center text-slate-400">Loading Package Manager...</div>
+});
+const WebInspector = dynamic(() => import("../components/WebInspector"), {
+  ssr: false,
+  loading: () => <div className="p-4 text-center text-slate-400">Loading Web Inspector...</div>
 });
 // import CommandPalette from "../components/CommandPalette";
 import { parseAICommand, executeAICommands } from "../utils/aiFileActions";
@@ -44,8 +53,10 @@ import {
   HiArrowDownTray,
   HiArrowUpTray,
   HiSquares2X2 as HiTemplate,
-  HiRocketLaunch
+  HiRocketLaunch,
+  HiChatBubbleLeftEllipsis
 } from "react-icons/hi2";
+import { chatStorage } from "../utils/chatStorage";
 
 const defaultFiles = {
   "README.md": "# 🚀 Claude 4 Codespace - AI-Powered Development\n\n## Features\n- 🤖 **AI-First Development** with Claude 4\n- ⚡ **Auto Code Generation** \n- 🔍 **Real-time Analysis**\n- 📱 **Mobile-First Design**\n- 💻 **VSCode-like Experience**\n\n## Quick Start\n1. Select a file from the Files panel\n2. Start coding with AI assistance\n3. Use Terminal for advanced commands\n4. Everything auto-saves and syncs\n\n**Status:** ✅ Ready for development",
@@ -73,6 +84,10 @@ export default function ModernCodespace() {
   const [fontSize, setFontSize] = useState(14);
   const [showTemplates, setShowTemplates] = useState(false);
   const [showCodeRunner, setShowCodeRunner] = useState(false);
+  const [showChatHistory, setShowChatHistory] = useState(false);
+  const [showSmartPackageManager, setShowSmartPackageManager] = useState(false);
+  const [showWebInspector, setShowWebInspector] = useState(false);
+  const [currentChatSession, setCurrentChatSession] = useState(null);
 
   // Initialize auto-save functionality
   const { queueFileChange, saveSession, restoreSession, getSaveStatus, clearSession } = useAutoSave(
@@ -81,12 +96,24 @@ export default function ModernCodespace() {
     activePanel, enhancedEditorEnabled
   );
 
+  // Make chat history accessible from ModernChat
+  useEffect(() => {
+    window.showChatHistory = () => setShowChatHistory(true);
+    return () => {
+      delete window.showChatHistory;
+    };
+  }, []);
+
   // Restore session on mount
   useEffect(() => {
     const restored = restoreSession();
     if (restored) {
       showNotification('Session restored! 🔄', 'success');
     }
+    
+    // Initialize chat session
+    const sessionId = chatStorage.getCurrentSessionId();
+    setCurrentChatSession(sessionId);
     
     // Restore user preferences
     const savedDarkMode = localStorage.getItem('darkMode');
@@ -333,6 +360,13 @@ export default function ModernCodespace() {
     }
   }
 
+  // Chat session handlers
+  function handleSwitchChatSession(sessionId) {
+    setCurrentChatSession(sessionId);
+    // The ModernChat component will handle loading the chat history
+    showNotification('Switched to chat session', 'success');
+  }
+
   const getLang = (fname) => {
     if (!fname) return "plaintext";
     return fname.endsWith(".js") ? "javascript" :
@@ -447,9 +481,9 @@ export default function ModernCodespace() {
             <div className={`w-px h-5 ${darkMode ? 'bg-slate-700' : 'bg-gray-300'} mx-1`} />
             
             <button
-              onClick={() => setShowPackageManager(true)}
+              onClick={() => setShowSmartPackageManager(true)}
               className={`p-2 ${darkMode ? 'text-slate-400 hover:text-purple-400 hover:bg-purple-500/10' : 'text-gray-600 hover:text-purple-600 hover:bg-purple-50'} rounded-lg transition-all`}
-              title="Package Manager"
+              title="Smart Package Manager"
             >
               <HiCube className="w-4 h-4" />
             </button>
@@ -466,6 +500,24 @@ export default function ModernCodespace() {
               title="Code Runner"
             >
               <HiPlay className="w-4 h-4" />
+            </button>
+            
+            {/* Chat History */}
+            <button
+              onClick={() => setShowChatHistory(true)}
+              className={`p-2 ${darkMode ? 'text-slate-400 hover:text-blue-400 hover:bg-blue-500/10' : 'text-gray-600 hover:text-blue-600 hover:bg-blue-50'} rounded-lg transition-all`}
+              title="Chat History"
+            >
+              <HiChatBubbleLeftEllipsis className="w-4 h-4" />
+            </button>
+            
+            {/* Web Inspector */}
+            <button
+              onClick={() => setShowWebInspector(true)}
+              className={`p-2 ${darkMode ? 'text-slate-400 hover:text-red-400 hover:bg-red-500/10' : 'text-gray-600 hover:text-red-600 hover:bg-red-50'} rounded-lg transition-all`}
+              title="Web Inspector"
+            >
+              <HiCodeBracket className="w-4 h-4" />
             </button>
             
             <div className={`w-px h-5 ${darkMode ? 'bg-slate-700' : 'bg-gray-300'} mx-1`} />
@@ -745,6 +797,9 @@ export default function ModernCodespace() {
               setFolders={setFolders}
               setExpandedFolders={setExpandedFolders}
               setOpenTabs={setOpenTabs}
+              currentChatSession={currentChatSession}
+              onSwitchChatSession={handleSwitchChatSession}
+              onShowChatHistory={() => setShowChatHistory(true)}
             />
           </div>
         </div>
@@ -840,6 +895,9 @@ export default function ModernCodespace() {
                 setFolders={setFolders}
                 setExpandedFolders={setExpandedFolders}
                 setOpenTabs={setOpenTabs}
+                currentChatSession={currentChatSession}
+                onSwitchChatSession={handleSwitchChatSession}
+                onShowChatHistory={() => setShowChatHistory(true)}
               />
             </div>
           )}
@@ -855,6 +913,31 @@ export default function ModernCodespace() {
         showNotification={showNotification}
         isOpen={showPackageManager}
         onClose={() => setShowPackageManager(false)}
+      />
+      
+      {/* Smart Package Manager Modal */}
+      <SmartPackageManager
+        files={files}
+        showNotification={showNotification}
+        onAddFile={handleFileUpload}
+        isOpen={showSmartPackageManager}
+        onClose={() => setShowSmartPackageManager(false)}
+      />
+      
+      {/* Chat History Modal */}
+      <ChatHistory
+        isOpen={showChatHistory}
+        onClose={() => setShowChatHistory(false)}
+        onSwitchChat={handleSwitchChatSession}
+        currentSessionId={currentChatSession}
+        showNotification={showNotification}
+      />
+      
+      {/* Web Inspector Modal */}
+      <WebInspector
+        isOpen={showWebInspector}
+        onClose={() => setShowWebInspector(false)}
+        showNotification={showNotification}
       />
 
       {/* Live Preview Modal */}
