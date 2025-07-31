@@ -7,10 +7,14 @@ import NotificationPanel from "../components/NotificationPanel";
 import TabBar from "../components/TabBar";
 import PackageManager from "../components/PackageManager";
 import LivePreview from "../components/LivePreview";
+import FileUpload from "../components/FileUpload";
+import CodeRunner from "../components/CodeRunner";
 // import CommandPalette from "../components/CommandPalette";
 import { parseAICommand, executeAICommands } from "../utils/aiFileActions";
 import { smartFileCreation } from "../utils/advancedFileOperations";
 import { useAutoSave } from "../utils/autoSave";
+import { downloadFile, downloadProjectAsZip } from "../utils/fileDownload";
+import { createProjectFromTemplate, templates } from "../utils/projectTemplates";
 import "../utils/suppressResizeObserverErrors";
 import {
   HiCodeBracket,
@@ -30,7 +34,11 @@ import {
   HiMagnifyingGlass,
   HiOutlineSparkles,
   HiBolt,
-  HiCheck
+  HiCheck,
+  HiArrowDownTray,
+  HiArrowUpTray,
+  HiTemplate,
+  HiRocketLaunch
 } from "react-icons/hi2";
 
 const defaultFiles = {
@@ -57,6 +65,8 @@ export default function ModernCodespace() {
   const [minimap, setMinimap] = useState(true);
   const [wordWrap, setWordWrap] = useState(true);
   const [fontSize, setFontSize] = useState(14);
+  const [showTemplates, setShowTemplates] = useState(false);
+  const [showCodeRunner, setShowCodeRunner] = useState(false);
 
   // Initialize auto-save functionality
   const { queueFileChange, saveSession, restoreSession, getSaveStatus, clearSession } = useAutoSave(
@@ -331,6 +341,73 @@ export default function ModernCodespace() {
            "plaintext";
   };
 
+  // Advanced feature handlers
+  function handleFileUpload(filename, content) {
+    setFiles(prev => ({ ...prev, [filename]: content }));
+    
+    // Add to open tabs if not already open
+    if (!openTabs.includes(filename)) {
+      setOpenTabs(prev => [...prev, filename]);
+    }
+    
+    // Select the uploaded file
+    setSelected(filename);
+    
+    // Add folder if file is in a folder
+    const folderPath = filename.split('/');
+    if (folderPath.length > 1) {
+      const folder = folderPath.slice(0, -1).join('/');
+      if (!folders.includes(folder)) {
+        setFolders(prev => [...prev, folder].sort());
+        setExpandedFolders(prev => [...prev, folder]);
+      }
+    }
+  }
+
+  function handleDownloadFile() {
+    if (!selected || !files[selected]) {
+      showNotification('No file selected to download', 'error');
+      return;
+    }
+    
+    downloadFile(selected, files[selected]);
+    showNotification(`Downloaded ${selected}`, 'success');
+  }
+
+  function handleDownloadProject() {
+    downloadProjectAsZip(files, folders, 'claude-project');
+    showNotification('Project exported successfully!', 'success');
+  }
+
+  function handleLoadTemplate(templateKey) {
+    try {
+      const template = createProjectFromTemplate(templateKey);
+      
+      // Confirm before replacing current project
+      const confirmReplace = window.confirm(
+        `This will replace your current project with "${template.name}". Continue?`
+      );
+      
+      if (!confirmReplace) return;
+      
+      // Load template
+      setFiles(template.files);
+      setFolders(template.folders);
+      setExpandedFolders(template.folders);
+      
+      // Select first file
+      const firstFile = Object.keys(template.files)[0];
+      setSelected(firstFile);
+      setOpenTabs([firstFile]);
+      
+      setShowTemplates(false);
+      showNotification(`Template "${template.name}" loaded successfully!`, 'success');
+      
+    } catch (error) {
+      showNotification(`Error loading template: ${error.message}`, 'error');
+    }
+  }
+
   return (
     <div className={`h-screen w-screen ${darkMode ? 'bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900' : 'bg-gradient-to-br from-gray-50 via-white to-gray-100'} flex flex-col overflow-hidden transition-colors duration-300`}>
       {/* Modern Header with Glass Effect */}
@@ -378,10 +455,38 @@ export default function ModernCodespace() {
               <HiEye className="w-4 h-4" />
             </button>
             <button 
-              onClick={() => showNotification('Running code...', 'info')}
-              className={`p-2 ${darkMode ? 'text-slate-400 hover:text-green-400 hover:bg-green-500/10' : 'text-gray-600 hover:text-green-600 hover:bg-green-50'} rounded-lg transition-all`}
+              onClick={() => setShowCodeRunner(!showCodeRunner)}
+              className={`p-2 ${showCodeRunner ? (darkMode ? 'text-green-400 bg-green-500/10' : 'text-green-600 bg-green-50') : (darkMode ? 'text-slate-400 hover:text-green-400 hover:bg-green-500/10' : 'text-gray-600 hover:text-green-600 hover:bg-green-50')} rounded-lg transition-all`}
+              title="Code Runner"
             >
               <HiPlay className="w-4 h-4" />
+            </button>
+            
+            <div className={`w-px h-5 ${darkMode ? 'bg-slate-700' : 'bg-gray-300'} mx-1`} />
+            
+            {/* File Upload */}
+            <FileUpload
+              onFileUpload={handleFileUpload}
+              showNotification={showNotification}
+            />
+            
+            {/* Download Actions */}
+            <button
+              onClick={handleDownloadFile}
+              disabled={!selected}
+              className={`p-2 ${darkMode ? 'text-slate-400 hover:text-blue-400 hover:bg-blue-500/10 disabled:opacity-50' : 'text-gray-600 hover:text-blue-600 hover:bg-blue-50 disabled:opacity-50'} rounded-lg transition-all`}
+              title="Download Current File"
+            >
+              <HiArrowDownTray className="w-4 h-4" />
+            </button>
+            
+            {/* Templates */}
+            <button
+              onClick={() => setShowTemplates(true)}
+              className={`p-2 ${darkMode ? 'text-slate-400 hover:text-orange-400 hover:bg-orange-500/10' : 'text-gray-600 hover:text-orange-600 hover:bg-orange-50'} rounded-lg transition-all`}
+              title="Project Templates"
+            >
+              <HiTemplate className="w-4 h-4" />
             </button>
             
             <div className={`w-px h-5 ${darkMode ? 'bg-slate-700' : 'bg-gray-300'} mx-1`} />
@@ -554,41 +659,52 @@ export default function ModernCodespace() {
             />
 
             {/* Editor Content */}
-            <div className="flex-1">
-              {selected ? (
-                enhancedEditorEnabled ? (
-                  <EnhancedEditorPanel
-                    filename={selected}
-                    value={files[selected]}
-                    language={getLang(selected)}
-                    onChange={handleFileEdit}
-                    onClose={() => handleTabClose(selected)}
-                    onSave={() => showNotification(`Saved ${selected}`, 'success')}
-                    hasChanges={false}
-                    files={files}
-                    setFiles={setFiles}
-                    showNotification={showNotification}
-                    selectedModel="claude-sonnet-4-20250514"
-                  />
+            <div className="flex-1 flex flex-col">
+              <div className="flex-1">
+                {selected ? (
+                  enhancedEditorEnabled ? (
+                    <EnhancedEditorPanel
+                      filename={selected}
+                      value={files[selected]}
+                      language={getLang(selected)}
+                      onChange={handleFileEdit}
+                      onClose={() => handleTabClose(selected)}
+                      onSave={() => showNotification(`Saved ${selected}`, 'success')}
+                      hasChanges={false}
+                      files={files}
+                      setFiles={setFiles}
+                      showNotification={showNotification}
+                      selectedModel="claude-sonnet-4-20250514"
+                    />
+                  ) : (
+                    <EditorPanel
+                      filename={selected}
+                      value={files[selected]}
+                      language={getLang(selected)}
+                      onChange={handleFileEdit}
+                      onClose={() => handleTabClose(selected)}
+                      onSave={() => showNotification(`Saved ${selected}`, 'success')}
+                      hasChanges={false}
+                    />
+                  )
                 ) : (
-                  <EditorPanel
-                    filename={selected}
-                    value={files[selected]}
-                    language={getLang(selected)}
-                    onChange={handleFileEdit}
-                    onClose={() => handleTabClose(selected)}
-                    onSave={() => showNotification(`Saved ${selected}`, 'success')}
-                    hasChanges={false}
-                  />
-                )
-              ) : (
-                <div className="h-full flex items-center justify-center">
-                  <div className="text-center">
-                    <HiCodeBracket className="mx-auto h-16 w-16 text-slate-500 mb-4" />
-                    <h3 className="text-lg font-medium text-slate-300">No File Selected</h3>
-                    <p className="text-sm text-slate-500 mt-2">Choose a file to start coding</p>
+                  <div className="h-full flex items-center justify-center">
+                    <div className="text-center">
+                      <HiCodeBracket className="mx-auto h-16 w-16 text-slate-500 mb-4" />
+                      <h3 className="text-lg font-medium text-slate-300">No File Selected</h3>
+                      <p className="text-sm text-slate-500 mt-2">Choose a file to start coding</p>
+                    </div>
                   </div>
-                </div>
+                )}
+              </div>
+              
+              {/* Code Runner Panel */}
+              {showCodeRunner && (
+                <CodeRunner
+                  files={files}
+                  selectedFile={selected}
+                  showNotification={showNotification}
+                />
               )}
             </div>
           </div>
@@ -743,6 +859,92 @@ export default function ModernCodespace() {
         isOpen={showLivePreview}
         onClose={() => setShowLivePreview(false)}
       />
+
+      {/* Template Selection Modal */}
+      {showTemplates && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className={`${darkMode ? 'bg-slate-900' : 'bg-white'} rounded-2xl shadow-2xl max-w-4xl w-full max-h-[80vh] overflow-hidden`}>
+            {/* Modal Header */}
+            <div className={`px-6 py-4 border-b ${darkMode ? 'border-slate-700' : 'border-gray-200'}`}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <HiTemplate className={`w-6 h-6 ${darkMode ? 'text-orange-400' : 'text-orange-600'}`} />
+                  <h2 className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                    Project Templates
+                  </h2>
+                </div>
+                <button
+                  onClick={() => setShowTemplates(false)}
+                  className={`p-2 rounded-lg ${darkMode ? 'hover:bg-slate-700 text-slate-400' : 'hover:bg-gray-100 text-gray-600'} transition-colors`}
+                >
+                  ✕
+                </button>
+              </div>
+              <p className={`text-sm ${darkMode ? 'text-slate-400' : 'text-gray-600'} mt-1`}>
+                Choose a template to quickly start your project
+              </p>
+            </div>
+
+            {/* Template Grid */}
+            <div className="p-6 overflow-y-auto max-h-[60vh]">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {Object.entries(templates).map(([key, template]) => (
+                  <div
+                    key={key}
+                    className={`p-4 rounded-xl border ${darkMode ? 'border-slate-700 bg-slate-800/50 hover:bg-slate-800' : 'border-gray-200 bg-gray-50 hover:bg-gray-100'} cursor-pointer transition-all group`}
+                    onClick={() => handleLoadTemplate(key)}
+                  >
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className={`p-2 rounded-lg ${darkMode ? 'bg-slate-700' : 'bg-white'} group-hover:scale-110 transition-transform`}>
+                        <HiRocketLaunch className={`w-5 h-5 ${darkMode ? 'text-orange-400' : 'text-orange-600'}`} />
+                      </div>
+                      <h3 className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                        {template.name}
+                      </h3>
+                    </div>
+                    <p className={`text-sm ${darkMode ? 'text-slate-400' : 'text-gray-600'} mb-3`}>
+                      {template.description}
+                    </p>
+                    <div className="flex items-center gap-2 text-xs">
+                      <span className={`px-2 py-1 rounded ${darkMode ? 'bg-slate-700 text-slate-300' : 'bg-gray-200 text-gray-700'}`}>
+                        {Object.keys(template.files).length} files
+                      </span>
+                      {template.folders.length > 0 && (
+                        <span className={`px-2 py-1 rounded ${darkMode ? 'bg-slate-700 text-slate-300' : 'bg-gray-200 text-gray-700'}`}>
+                          {template.folders.length} folders
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className={`px-6 py-4 border-t ${darkMode ? 'border-slate-700 bg-slate-800/50' : 'border-gray-200 bg-gray-50'}`}>
+              <div className="flex items-center justify-between">
+                <p className={`text-xs ${darkMode ? 'text-slate-500' : 'text-gray-500'}`}>
+                  Templates will replace your current project
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleDownloadProject}
+                    className={`px-4 py-2 text-sm rounded-lg ${darkMode ? 'bg-slate-700 hover:bg-slate-600 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-900'} transition-colors`}
+                  >
+                    Export Current Project
+                  </button>
+                  <button
+                    onClick={() => setShowTemplates(false)}
+                    className={`px-4 py-2 text-sm rounded-lg ${darkMode ? 'bg-slate-600 hover:bg-slate-700 text-white' : 'bg-gray-300 hover:bg-gray-400 text-gray-900'} transition-colors`}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

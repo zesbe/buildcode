@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  reactStrictMode: true,
+  reactStrictMode: false, // Disable to prevent hydration issues in production
   // Remove static export for server-side rendering
   // output: 'export',
   // Image optimization works with server-side rendering
@@ -9,6 +9,10 @@ const nextConfig = {
   },
   // Trailing slashes for better compatibility
   trailingSlash: true,
+  // Add experimental features for better production stability
+  experimental: {
+    serverComponentsExternalPackages: [],
+  },
   // Ensure API routes are properly handled
   async headers() {
     return [
