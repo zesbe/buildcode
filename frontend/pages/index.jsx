@@ -628,9 +628,9 @@ export default function ModernCodespace() {
         </div>
 
         {/* Mobile Layout */}
-        <div className="lg:hidden w-full h-full">
+        <div className="lg:hidden w-full h-full pb-16">
           {activePanel === 'files' && (
-            <div className="h-full bg-slate-900/50">
+            <div className="h-full bg-slate-900/50 overflow-auto">
               <FileExplorer
                 files={files}
                 folders={folders}
@@ -649,7 +649,7 @@ export default function ModernCodespace() {
           )}
 
           {activePanel === 'editor' && (
-            <div className="h-full bg-slate-900/30 flex flex-col">
+            <div className="h-full bg-slate-900/30 flex flex-col overflow-hidden">
               {/* Tab Bar for Mobile */}
               <TabBar
                 openTabs={openTabs}
@@ -660,7 +660,7 @@ export default function ModernCodespace() {
               />
 
               {/* Mobile Editor Content */}
-              <div className="flex-1">
+              <div className="flex-1 overflow-hidden">
                 {selected ? (
                   enhancedEditorEnabled ? (
                     <EnhancedEditorPanel
@@ -707,7 +707,7 @@ export default function ModernCodespace() {
           )}
 
           {activePanel === 'terminal' && (
-            <div className="h-full bg-slate-900/50">
+            <div className="h-full bg-slate-900/50 overflow-hidden">
               <ModernChat
                 files={files}
                 setFiles={setFiles}

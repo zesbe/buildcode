@@ -112,7 +112,7 @@ export default function TerminalStyleChat({ files, setFiles, selected, setSelect
   return (
     <div className="flex flex-col h-full bg-slate-950">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 bg-slate-900 border-b border-slate-800">
+      <div className="flex items-center justify-between px-4 py-3 bg-slate-900 border-b border-slate-800 flex-shrink-0">
         <div className="flex items-center gap-3">
           <div className="p-2 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg">
             <HiSparkles className="text-white w-4 h-4" />
@@ -139,7 +139,7 @@ export default function TerminalStyleChat({ files, setFiles, selected, setSelect
       {/* Chat Messages Area */}
       <div 
         ref={chatContainerRef}
-        className="flex-1 overflow-y-auto p-4 space-y-4"
+        className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0"
         onClick={() => inputRef.current?.focus()}
       >
         {messages.map((message, index) => (
@@ -220,7 +220,7 @@ export default function TerminalStyleChat({ files, setFiles, selected, setSelect
       </div>
 
       {/* Input Area */}
-      <div className="border-t border-slate-800 bg-slate-900 p-4">
+      <div className="border-t border-slate-800 bg-slate-900 p-4 flex-shrink-0">
         <div className="flex gap-3 items-end">
           <div className="flex-1 bg-slate-800 rounded-2xl border border-slate-700 focus-within:border-blue-500 transition-colors">
             <textarea
