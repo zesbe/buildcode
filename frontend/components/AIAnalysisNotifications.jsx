@@ -342,7 +342,7 @@ export default function AIAnalysisNotifications({
 
         {/* Analysis Timestamp */}
         <div className="text-xs text-slate-500 text-center mt-4 pt-3 border-t border-slate-700">
-          Analysis completed at {new Date(analysis.timestamp).toLocaleTimeString()}
+          Analysis completed at {analysis.timestamp ? new Date(analysis.timestamp).toLocaleTimeString() : '--:--'}
         </div>
       </div>
     </div>

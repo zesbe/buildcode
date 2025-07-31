@@ -1,96 +1,157 @@
-# Chat AI Percobaan
+# 🚀 Chat AI Percobaan - Claude 4 Codespace
 
-Modern chat application with AI integration, organized with separate backend and frontend for easy deployment.
+Modern chat application with AI integration, featuring a VS Code-like editor and Claude AI assistance.
 
-## 🚀 Quick Deploy
-
-### Backend (Railway)
-[![Deploy Backend](https://railway.app/button.svg)](https://railway.app/new/template?template=https%3A%2F%2Fgithub.com%2Fzesbe%2Fchat-ai-percobaan&envs=ANTHROPIC_API_KEY&envDescription=Claude%20API%20Key&envLink=https%3A%2F%2Fconsole.anthropic.com&referralCode=railway)
-
-### Frontend (Vercel)
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fzesbe%2Fchat-ai-percobaan&project-name=chat-ai-frontend&repository-name=chat-ai-frontend&root-directory=frontend&env=NEXT_PUBLIC_API_URL,ANTHROPIC_API_KEY&envDescription=Backend%20API%20URL%20and%20Claude%20API%20Key)
-
-### Frontend (Railway)
-[![Deploy Frontend on Railway](https://railway.app/button.svg)](https://railway.app/new/template?template=https%3A%2F%2Fgithub.com%2Fzesbe%2Fchat-ai-percobaan&envs=NEXT_PUBLIC_API_URL,ANTHROPIC_API_KEY&envDescription=Backend%20API%20URL%20and%20Claude%20API%20Key)
-
-## Project Structure
+## 📋 Project Structure
 
 ```
 chat-ai-percobaan/
 ├── backend/          # Express.js API server
 ├── frontend/         # Next.js React application
-├── scripts/          # Deployment and utility scripts
-├── docs/            # Documentation and deployment guides
-├── contoh-apps/     # Sample applications
-└── README.md        # This file
+├── package.json      # Root package management
+└── railway-template.json # Railway deployment template
 ```
 
-## Quick Start
+## ✨ Features
 
-### Development
-```bash
-# Install all dependencies
-npm run install:all
+### Backend (Express.js)
+- **Claude AI Integration** with streaming support
+- **GitHub API Integration** for repository management
+- **Rate limiting** and error handling
+- **Health check endpoints**
+- **CORS enabled** for frontend communication
 
-# Run both backend and frontend in development mode
-npm run dev
-```
+### Frontend (Next.js)
+- **VS Code-like Interface** with Monaco Editor
+- **AI-powered code assistance** with Claude 4
+- **Real-time chat streaming** 
+- **File management** with folder structure
+- **Live preview** and package management
+- **Dark/light theme** support
+- **Mobile-responsive** design
 
-### Backend Only
-```bash
-cd backend
-npm install
-npm run dev
-```
+## 🚀 Quick Start
 
-### Frontend Only
-```bash
-cd frontend
-npm install
-npm run dev
-```
+### Local Development
 
-## Deployment
+1. **Install dependencies**:
+   ```bash
+   npm run install:all
+   ```
+
+2. **Setup environment variables**:
+   ```bash
+   # Backend (.env)
+   ANTHROPIC_API_KEY=your_api_key_here
+   GITHUB_TOKEN=your_github_token_here
+   
+   # Frontend
+   NEXT_PUBLIC_API_URL=http://localhost:3002
+   ```
+
+3. **Run development servers**:
+   ```bash
+   npm run dev
+   ```
 
 ### Railway Deployment
 
-#### Deploy Backend Only
-```bash
-cd backend
-railway up
+#### One-Click Deploy
+[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/template/your-template-id)
+
+#### Manual Deploy
+1. **Backend Deploy**:
+   ```bash
+   cd backend
+   railway up
+   ```
+
+2. **Frontend Deploy**:
+   ```bash
+   cd frontend  
+   railway up
+   ```
+
+3. **Environment Variables**:
+   - Backend: `ANTHROPIC_API_KEY`
+   - Frontend: `NEXT_PUBLIC_API_URL` (backend service URL)
+
+## 🔧 Configuration
+
+### Backend Configuration
+- Port: 3002
+- Health endpoint: `/api/health`
+- Chat endpoint: `/api/chat`
+- GitHub endpoints: `/api/github/*`
+
+### Frontend Configuration  
+- Port: 3000
+- Built with Next.js 14
+- Uses own API routes for Claude integration
+- Independent deployment from backend
+
+## 📊 API Endpoints
+
+### Backend API
+```
+GET  /api/health     # Health check
+POST /api/chat       # Chat with Claude AI
+GET  /api/github/*   # GitHub integration
 ```
 
-#### Deploy Frontend Only
-```bash
-cd frontend
-railway up
+### Frontend API
+```
+POST /api/claude          # Claude AI direct integration
+POST /api/claude-stream   # Streaming chat
+GET  /api/test-*         # Test endpoints
 ```
 
-#### Deploy Frontend to Railway
-```bash
-cd frontend
-railway up
-```
+## 🛠️ Tech Stack
 
-#### Deploy Both (Monorepo Style)
-```bash
-# From root directory
-railway up
-```
+- **Backend**: Express.js, Anthropic SDK, Octokit
+- **Frontend**: Next.js, React, Monaco Editor, Tailwind CSS
+- **AI**: Claude 4 (Opus & Sonnet models)
+- **Deployment**: Railway, Vercel
+- **Database**: File-based (localStorage for frontend)
 
-## Environment Variables
+## 🔐 Environment Variables
 
-### Backend
-- `NODE_ENV` - Environment (development/production)
-- `PORT` - Server port (default: 3002)
-- `ANTHROPIC_API_KEY` - Claude API key
+### Required
+- `ANTHROPIC_API_KEY`: Anthropic Claude API key
+- `NODE_ENV`: production/development
 
-### Frontend
-- `NEXT_PUBLIC_API_URL` - Backend API URL
+### Optional  
+- `GITHUB_TOKEN`: GitHub API access
+- `NEXT_PUBLIC_API_URL`: Backend service URL
 
-## Documentation
+## 📱 Usage
 
-See `docs/deployment/` for detailed deployment guides:
-- Railway deployment guide
-- Vercel deployment guide
-- Netlify deployment guide
+1. **Open the application** in your browser
+2. **Select files** from the file explorer
+3. **Write code** with AI assistance in Monaco editor
+4. **Chat with Claude** for code help and analysis
+5. **Use live preview** to see results
+6. **Manage packages** with integrated package manager
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit changes (`git commit -m 'Add amazing feature'`)
+4. Push to branch (`git push origin feature/amazing-feature`)
+5. Open Pull Request
+
+## 📄 License
+
+This project is licensed under the MIT License.
+
+## 🆘 Support
+
+- Check Railway logs for deployment issues
+- Verify API keys are properly set
+- Ensure CORS is configured for cross-origin requests
+- Frontend has independent API routes and doesn't require backend for basic functionality
+
+---
+
+**Made with ❤️ using Claude 4 AI assistance**
