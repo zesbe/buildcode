@@ -342,43 +342,56 @@ export class DeploymentMonitor {
     // Only start in browser environment
     if (typeof window === 'undefined') return;
     
+    // Skip monitoring in development environment to prevent console noise
+    if (typeof window !== 'undefined' && 
+        (window.location.hostname === 'localhost' || 
+         window.location.hostname === '127.0.0.1' ||
+         window.location.port === '3000')) {
+      console.log('DeploymentMonitor: Skipping health checks in development mode');
+      return;
+    }
+    
     // Check deployment health every 2 minutes
     setInterval(() => {
       this.checkDeploymentHealth();
     }, 2 * 60 * 1000);
     
-    // Initial check
-    setTimeout(() => this.checkDeploymentHealth(), 1000);
+    // Initial check with delay to let app fully load
+    setTimeout(() => this.checkDeploymentHealth(), 5000);
   }
 
   async checkDeploymentHealth() {
-    const checks = await Promise.allSettled([
-      this.checkAPIHealth(),
-      this.checkAssetHealth(),
-      this.checkDatabaseHealth(),
-      this.checkExternalServices()
-    ]);
+    try {
+      const checks = await Promise.allSettled([
+        this.checkAPIHealth(),
+        this.checkAssetHealth(),
+        this.checkDatabaseHealth(),
+        this.checkExternalServices()
+      ]);
 
-    const results = checks.map((check, index) => ({
-      name: ['API', 'Assets', 'Database', 'External'][index],
-      status: check.status === 'fulfilled' ? check.value : 'failed',
-      error: check.status === 'rejected' ? check.reason : null
-    }));
+      const results = checks.map((check, index) => ({
+        name: ['API', 'Assets', 'Database', 'External'][index],
+        status: check.status === 'fulfilled' ? check.value : 'failed',
+        error: check.status === 'rejected' ? check.reason : null
+      }));
 
-    this.healthChecks.push({
-      timestamp: Date.now(),
-      results,
-      overallHealth: results.every(r => r.status === 'healthy') ? 'healthy' : 'degraded'
-    });
+      this.healthChecks.push({
+        timestamp: Date.now(),
+        results,
+        overallHealth: results.every(r => r.status === 'healthy') ? 'healthy' : 'degraded'
+      });
 
-    // Keep only last 24 hours of checks
-    const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
-    this.healthChecks = this.healthChecks.filter(check => check.timestamp > oneDayAgo);
+      // Keep only last 24 hours of checks
+      const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
+      this.healthChecks = this.healthChecks.filter(check => check.timestamp > oneDayAgo);
 
-    this.lastCheck = Date.now();
-    
-    // Check for alerts
-    this.checkForAlerts(results);
+      this.lastCheck = Date.now();
+      
+      // Check for alerts
+      this.checkForAlerts(results);
+    } catch (error) {
+      console.warn('DeploymentMonitor: Health check failed:', error);
+    }
   }
 
   async checkAPIHealth() {
@@ -395,13 +408,18 @@ export class DeploymentMonitor {
 
   async checkAssetHealth() {
     try {
-      // Check if critical assets are loading
+      // Check if critical assets are loading - use SVG favicon instead of ICO
       const testImage = new Image();
-      testImage.src = '/favicon.ico?' + Date.now();
+      testImage.src = '/favicon.svg?' + Date.now();
       
       return new Promise((resolve) => {
         testImage.onload = () => resolve('healthy');
-        testImage.onerror = () => resolve('unhealthy');
+        testImage.onerror = () => {
+          // Fallback: just check if we can fetch any asset
+          fetch('/favicon.svg', { method: 'HEAD' })
+            .then(response => resolve(response.ok ? 'healthy' : 'unhealthy'))
+            .catch(() => resolve('unhealthy'));
+        };
         setTimeout(() => resolve('timeout'), 3000);
       });
     } catch (error) {
@@ -421,10 +439,11 @@ export class DeploymentMonitor {
 
   async checkExternalServices() {
     try {
-      // Check critical external services
+      // For frontend-only app, we can't directly check external APIs due to CORS
+      // Instead, we'll check if our own API endpoints are responding
       const services = [
-        'https://api.anthropic.com',
-        // Add other critical services
+        '/api/health',
+        '/api/db-health'
       ];
       
       const checks = await Promise.allSettled(
