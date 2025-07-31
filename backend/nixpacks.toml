@@ -1,0 +1,22 @@
+# ==============================================
+# NIXPACKS CONFIG - BACKEND DEPLOYMENT
+# ==============================================
+
+[phases.setup]
+nixPkgs = ['nodejs-18_x']
+
+[phases.install]
+cmds = [
+    'npm ci --only=production --silent'
+]
+
+[phases.build]
+cmds = [
+    'npm run build'
+]
+
+[start]
+cmd = 'npm start'
+
+[variables]
+NODE_ENV = 'production'

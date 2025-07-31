@@ -1,0 +1,15 @@
+{
+  "name": "chat-ai-percobaan-frontend",
+  "framework": "nextjs",
+  "buildCommand": "npm run build",
+  "outputDirectory": ".next",
+  "installCommand": "npm install",
+  "env": {
+    "NEXT_PUBLIC_API_URL": "https://chat-ai-percobaan-production.up.railway.app"
+  },
+  "build": {
+    "env": {
+      "NEXT_PUBLIC_API_URL": "https://chat-ai-percobaan-production.up.railway.app"
+    }
+  }
+}

@@ -1,0 +1,25 @@
+# ==============================================
+# RAILWAY DEPLOYMENT CONFIG - BACKEND
+# ==============================================
+
+[build]
+builder = "NIXPACKS"
+buildCommand = "npm ci --only=production"
+
+[deploy]
+startCommand = "npm start"
+restartPolicyType = "ON_FAILURE" 
+restartPolicyMaxRetries = 10
+healthcheckPath = "/api/health"
+healthcheckTimeout = 30
+
+[[services]]
+name = "claude-codespace-backend"
+port = 3002
+
+[environments.production]
+NODE_ENV = "production"
+
+# Optional: Custom domains
+# [[services.domains]]
+# domain = "api.yourdomain.com"

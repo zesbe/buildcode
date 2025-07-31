@@ -1,0 +1,31 @@
+{
+  "name": "claude-codespace",
+  "version": "1.0.0",
+  "description": "Modern VS Code-like editor with Claude AI integration",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "build:netlify": "next build && echo '/* /index.html 200' > out/_redirects",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@monaco-editor/react": "^4.6.0",
+    "axios": "^1.6.0",
+    "next": "^14.0.0",
+    "react": "^18.0.0",
+    "react-dnd": "^16.0.1",
+    "react-dnd-html5-backend": "^16.0.1",
+    "react-dom": "^18.0.0",
+    "react-icons": "^4.12.0"
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.4.16",
+    "postcss": "^8.4.31",
+    "tailwindcss": "^3.3.5"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
