@@ -127,6 +127,7 @@ export default function ModernCodespace() {
   const [systemHealth, setSystemHealth] = useState(100);
   const [showShortcutsHelp, setShowShortcutsHelp] = useState(false);
   const [showFloatingToolbar, setShowFloatingToolbar] = useState(true);
+  const [unsavedChanges, setUnsavedChanges] = useState(new Set()); // Track files with unsaved changes
   const [isCodeRunning, setIsCodeRunning] = useState(false);
 
   // Initialize auto-save functionality
@@ -518,11 +519,26 @@ export default function ModernCodespace() {
       
       setFiles(f => ({ ...f, [selected]: finalValue }));
       
+      // Mark file as having unsaved changes
+      setUnsavedChanges(prev => new Set([...prev, selected]));
+      
       // Queue for both old and new auto-save systems
       queueFileChange(selected, finalValue);
       if (advancedAutoSave) {
         advancedAutoSave.queueSave(selected, finalValue);
       }
+    }
+  }
+
+  function handleFileSave(filename = selected) {
+    if (filename) {
+      // Remove from unsaved changes
+      setUnsavedChanges(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(filename);
+        return newSet;
+      });
+      showNotification(`Saved ${filename}`, 'success');
     }
   }
 
@@ -948,6 +964,7 @@ export default function ModernCodespace() {
               onTabSelect={handleTabSelect}
               onTabClose={handleTabClose}
               files={files}
+              unsavedChanges={unsavedChanges}
             />
 
             {/* Editor Content */}
@@ -1002,8 +1019,8 @@ export default function ModernCodespace() {
                       language={getLang(selected)}
                       onChange={handleFileEdit}
                       onClose={() => handleTabClose(selected)}
-                      onSave={() => showNotification(`Saved ${selected}`, 'success')}
-                      hasChanges={false}
+                      onSave={() => handleFileSave(selected)}
+                      hasChanges={unsavedChanges.has(selected)}
                       files={files}
                       setFiles={setFiles}
                       showNotification={showNotification}
@@ -1016,8 +1033,8 @@ export default function ModernCodespace() {
                       language={getLang(selected)}
                       onChange={handleFileEdit}
                       onClose={() => handleTabClose(selected)}
-                      onSave={() => showNotification(`Saved ${selected}`, 'success')}
-                      hasChanges={false}
+                      onSave={() => handleFileSave(selected)}
+                      hasChanges={unsavedChanges.has(selected)}
                     />
                   )
                 ) : (
@@ -1107,6 +1124,7 @@ export default function ModernCodespace() {
                 onTabSelect={handleTabSelect}
                 onTabClose={handleTabClose}
                 files={files}
+                unsavedChanges={unsavedChanges}
               />
 
               {/* Mobile Editor Content */}
@@ -1119,8 +1137,8 @@ export default function ModernCodespace() {
                       language={getLang(selected)}
                       onChange={handleFileEdit}
                       onClose={() => handleTabClose(selected)}
-                      onSave={() => showNotification(`Saved ${selected}`, 'success')}
-                      hasChanges={false}
+                      onSave={() => handleFileSave(selected)}
+                      hasChanges={unsavedChanges.has(selected)}
                       files={files}
                       setFiles={setFiles}
                       showNotification={showNotification}
@@ -1133,8 +1151,8 @@ export default function ModernCodespace() {
                       language={getLang(selected)}
                       onChange={handleFileEdit}
                       onClose={() => handleTabClose(selected)}
-                      onSave={() => showNotification(`Saved ${selected}`, 'success')}
-                      hasChanges={false}
+                      onSave={() => handleFileSave(selected)}
+                      hasChanges={unsavedChanges.has(selected)}
                     />
                   )
                 ) : (

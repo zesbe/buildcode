@@ -25,7 +25,7 @@ function getFileIcon(filename) {
   return iconMap[ext] || { icon: HiDocument, color: 'text-slate-400' };
 }
 
-export default function TabBar({ openTabs, selectedTab, onTabSelect, onTabClose, files }) {
+export default function TabBar({ openTabs, selectedTab, onTabSelect, onTabClose, files, unsavedChanges }) {
   const tabBarRef = useRef(null);
 
   useEffect(() => {
@@ -61,7 +61,7 @@ export default function TabBar({ openTabs, selectedTab, onTabSelect, onTabClose,
       {openTabs.map((tab) => {
         const { icon: IconComponent, color } = getFileIcon(tab);
         const isSelected = tab === selectedTab;
-        const hasChanges = false; // TODO: implement unsaved changes detection
+        const hasChanges = unsavedChanges && unsavedChanges.has(tab);
         
         return (
           <div
