@@ -1,12 +1,19 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: false, // Disable to prevent hydration issues in production
-  // Enable static export for GitHub Pages
-  output: 'export',
-  // Disable image optimization for static export
-  images: {
-    unoptimized: true,
-  },
+  // Conditional static export - only for GitHub Pages build
+  ...(process.env.GITHUB_ACTIONS && {
+    output: 'export',
+    images: {
+      unoptimized: true,
+    },
+  }),
+  // For Railway, use standard server-side rendering
+  ...(!process.env.GITHUB_ACTIONS && {
+    images: {
+      domains: [], // Add external image domains if needed
+    },
+  }),
   // Trailing slashes for better compatibility
   trailingSlash: true,
   // Add experimental features for better production stability
@@ -49,7 +56,23 @@ const nextConfig = {
     
     return config;
   },
-  // Headers removed for static export compatibility
+  // Headers for Railway deployment (not static export)
+  ...(!process.env.GITHUB_ACTIONS && {
+    async headers() {
+      return [
+        {
+          // Apply these headers to all API routes
+          source: '/api/:path*',
+          headers: [
+            { key: 'Access-Control-Allow-Credentials', value: 'true' },
+            { key: 'Access-Control-Allow-Origin', value: '*' },
+            { key: 'Access-Control-Allow-Methods', value: 'GET,OPTIONS,PATCH,DELETE,POST,PUT' },
+            { key: 'Access-Control-Allow-Headers', value: 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version' },
+          ],
+        },
+      ];
+    },
+  }),
   eslint: {
     ignoreDuringBuilds: true,
   },
