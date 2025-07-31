@@ -11,6 +11,12 @@ import LivePreview from "../components/LivePreview";
 import FileUpload from "../components/FileUpload";
 import ChatHistory from "../components/ChatHistory";
 
+// Dynamic imports for auto features to prevent SSR issues
+const AutoMonitoringDashboard = dynamic(() => import("../components/AutoMonitoringDashboard"), {
+  ssr: false,
+  loading: () => <div className="p-4 text-center text-slate-400">Loading Monitoring...</div>
+});
+
 // Dynamic import to prevent SSR issues
 const CodeRunner = dynamic(() => import("../components/CodeRunner"), {
   ssr: false,
@@ -54,9 +60,23 @@ import {
   HiArrowUpTray,
   HiSquares2X2 as HiTemplate,
   HiRocketLaunch,
-  HiChatBubbleLeftEllipsis
+  HiChatBubbleLeftEllipsis,
+  HiChartBarSquare
 } from "react-icons/hi2";
 import { chatStorage } from "../utils/chatStorage";
+
+// Dynamic imports for auto systems
+let advancedAutoSave, autoFormatter, autoErrorRecovery, deploymentMonitor;
+if (typeof window !== 'undefined') {
+  import('../utils/advancedAutoSave').then(module => {
+    advancedAutoSave = module.advancedAutoSave;
+    autoFormatter = module.autoFormatter;
+  });
+  import('../utils/autoErrorRecovery').then(module => {
+    autoErrorRecovery = module.autoErrorRecovery;
+    deploymentMonitor = module.deploymentMonitor;
+  });
+}
 
 const defaultFiles = {
   "README.md": "# 🚀 Claude 4 Codespace - AI-Powered Development\n\n## Features\n- 🤖 **AI-First Development** with Claude 4\n- ⚡ **Auto Code Generation** \n- 🔍 **Real-time Analysis**\n- 📱 **Mobile-First Design**\n- 💻 **VSCode-like Experience**\n\n## Quick Start\n1. Select a file from the Files panel\n2. Start coding with AI assistance\n3. Use Terminal for advanced commands\n4. Everything auto-saves and syncs\n\n**Status:** ✅ Ready for development",
@@ -87,7 +107,10 @@ export default function ModernCodespace() {
   const [showChatHistory, setShowChatHistory] = useState(false);
   const [showSmartPackageManager, setShowSmartPackageManager] = useState(false);
   const [showWebInspector, setShowWebInspector] = useState(false);
+  const [showMonitoringDashboard, setShowMonitoringDashboard] = useState(false);
   const [currentChatSession, setCurrentChatSession] = useState(null);
+  const [autoFormatEnabled, setAutoFormatEnabled] = useState(true);
+  const [systemHealth, setSystemHealth] = useState(100);
 
   // Initialize auto-save functionality
   const { queueFileChange, saveSession, restoreSession, getSaveStatus, clearSession } = useAutoSave(
@@ -103,6 +126,44 @@ export default function ModernCodespace() {
       delete window.showChatHistory;
     };
   }, []);
+  
+  // Initialize auto systems
+  const initializeAutoSystems = () => {
+    if (typeof window === 'undefined') return;
+    
+    // Set up error recovery monitoring
+    const handleErrorRecovered = (event) => {
+      showNotification(`Auto-recovered: ${event.detail.strategy}`, 'success');
+    };
+    
+    const handleDeploymentAlert = (event) => {
+      const alert = event.detail;
+      showNotification(`System Alert: ${alert.message}`, 
+        alert.severity === 'high' ? 'error' : 'warning'
+      );
+    };
+    
+    window.addEventListener('error-recovered', handleErrorRecovered);
+    window.addEventListener('deployment-alert', handleDeploymentAlert);
+    
+    // Update system health periodically
+    const healthInterval = setInterval(() => {
+      if (autoErrorRecovery) {
+        const health = autoErrorRecovery.getHealthScore();
+        setSystemHealth(health);
+        
+        if (health < 50) {
+          showNotification('System health degraded - check monitoring dashboard', 'warning');
+        }
+      }
+    }, 30000); // Every 30 seconds
+    
+    return () => {
+      clearInterval(healthInterval);
+      window.removeEventListener('error-recovered', handleErrorRecovered);
+      window.removeEventListener('deployment-alert', handleDeploymentAlert);
+    };
+  };
 
   // Restore session on mount
   useEffect(() => {
@@ -114,6 +175,9 @@ export default function ModernCodespace() {
     // Initialize chat session
     const sessionId = chatStorage.getCurrentSessionId();
     setCurrentChatSession(sessionId);
+    
+    // Initialize auto systems
+    initializeAutoSystems();
     
     // Restore user preferences
     const savedDarkMode = localStorage.getItem('darkMode');
@@ -354,9 +418,19 @@ export default function ModernCodespace() {
 
   function handleFileEdit(value) {
     if (selected) {
-      setFiles(f => ({ ...f, [selected]: value }));
-      // Queue for auto-save
-      queueFileChange(selected, value);
+      // Auto-format if enabled
+      let finalValue = value;
+      if (autoFormatEnabled && value !== files[selected] && autoFormatter) {
+        finalValue = autoFormatter.format(selected, value);
+      }
+      
+      setFiles(f => ({ ...f, [selected]: finalValue }));
+      
+      // Queue for both old and new auto-save systems
+      queueFileChange(selected, finalValue);
+      if (advancedAutoSave) {
+        advancedAutoSave.queueSave(selected, finalValue);
+      }
     }
   }
 
@@ -520,6 +594,18 @@ export default function ModernCodespace() {
               <HiCodeBracket className="w-4 h-4" />
             </button>
             
+            {/* Auto Monitoring Dashboard */}
+            <button
+              onClick={() => setShowMonitoringDashboard(true)}
+              className={`relative p-2 ${darkMode ? 'text-slate-400 hover:text-green-400 hover:bg-green-500/10' : 'text-gray-600 hover:text-green-600 hover:bg-green-50'} rounded-lg transition-all`}
+              title="Auto Monitoring Dashboard"
+            >
+              <HiChartBarSquare className="w-4 h-4" />
+              {systemHealth < 80 && (
+                <div className="absolute -top-1 -right-1 w-3 h-3 bg-yellow-500 rounded-full animate-pulse"></div>
+              )}
+            </button>
+            
             <div className={`w-px h-5 ${darkMode ? 'bg-slate-700' : 'bg-gray-300'} mx-1`} />
             
             {/* File Upload */}
@@ -591,11 +677,39 @@ export default function ModernCodespace() {
             {darkMode ? <HiSun className="w-4 h-4" /> : <HiMoon className="w-4 h-4" />}
           </button>
           
-          {/* Status Indicator */}
-          <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-green-500/10 to-emerald-500/10 rounded-xl border border-green-500/20">
-            <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-            <span className="text-xs text-green-400 font-medium">
-              {enhancedEditorEnabled ? 'AI Active' : 'Connected'}
+          {/* Auto Format Toggle */}
+          <button
+            onClick={() => {
+              setAutoFormatEnabled(!autoFormatEnabled);
+              showNotification(autoFormatEnabled ? 'Auto-format disabled' : 'Auto-format enabled', 'info');
+            }}
+            className={`px-3 py-1.5 text-xs rounded-xl transition-all ${
+              autoFormatEnabled
+                ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30'
+                : darkMode ? 'bg-slate-700 text-slate-400' : 'bg-gray-200 text-gray-600'
+            }`}
+            title="Auto Format"
+          >
+            AUTO
+          </button>
+          
+          {/* System Health Indicator */}
+          <div className={`hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl border ${
+            systemHealth >= 80 ? 'bg-green-500/10 border-green-500/20' :
+            systemHealth >= 60 ? 'bg-yellow-500/10 border-yellow-500/20' :
+            'bg-red-500/10 border-red-500/20'
+          }`}>
+            <div className={`w-2 h-2 rounded-full animate-pulse ${
+              systemHealth >= 80 ? 'bg-green-400' :
+              systemHealth >= 60 ? 'bg-yellow-400' :
+              'bg-red-400'
+            }`}></div>
+            <span className={`text-xs font-medium ${
+              systemHealth >= 80 ? 'text-green-400' :
+              systemHealth >= 60 ? 'text-yellow-400' :
+              'text-red-400'
+            }`}>
+              {enhancedEditorEnabled ? 'AI Active' : 'Connected'} • {systemHealth}%
             </span>
           </div>
         </div>
@@ -937,6 +1051,13 @@ export default function ModernCodespace() {
       <WebInspector
         isOpen={showWebInspector}
         onClose={() => setShowWebInspector(false)}
+        showNotification={showNotification}
+      />
+      
+      {/* Auto Monitoring Dashboard */}
+      <AutoMonitoringDashboard
+        isOpen={showMonitoringDashboard}
+        onClose={() => setShowMonitoringDashboard(false)}
         showNotification={showNotification}
       />
 
