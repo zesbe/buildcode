@@ -24,7 +24,9 @@
       "Bash(GITHUB_ACTIONS=true npm run build)",
       "Bash(mkdir:*)",
       "Bash(dir:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(npm:*)",
+      "Bash(node:*)"
     ],
     "deny": []
   }
