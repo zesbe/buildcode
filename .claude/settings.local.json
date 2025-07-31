@@ -16,7 +16,9 @@
       "WebFetch(domain:chat-ai-percobaan-production.up.railway.app)",
       "Bash(git branch:*)",
       "Bash(gh repo edit:*)",
-      "WebFetch(domain:genuine-generosity-production.up.railway.app)"
+      "WebFetch(domain:genuine-generosity-production.up.railway.app)",
+      "Bash(npm install:*)",
+      "Bash(npm run build:*)"
     ],
     "deny": []
   }
