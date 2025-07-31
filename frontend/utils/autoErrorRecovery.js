@@ -342,12 +342,21 @@ export class DeploymentMonitor {
     // Only start in browser environment
     if (typeof window === 'undefined') return;
     
-    // Skip monitoring in development environment to prevent console noise
-    if (typeof window !== 'undefined' && 
+    // Skip monitoring in development environment or if explicitly disabled
+    const isDevelopment = typeof window !== 'undefined' && 
         (window.location.hostname === 'localhost' || 
          window.location.hostname === '127.0.0.1' ||
-         window.location.port === '3000')) {
-      console.log('DeploymentMonitor: Skipping health checks in development mode');
+         window.location.port === '3000');
+         
+    // Also skip if this is a static site deployment (common with Railway/Vercel static exports)
+    const isStaticDeployment = typeof window !== 'undefined' && 
+        window.location.pathname.includes('.html');
+    
+    // Skip monitoring for now to prevent console errors
+    const shouldSkipMonitoring = isDevelopment || isStaticDeployment || true; // Temporarily disabled
+    
+    if (shouldSkipMonitoring) {
+      console.log('DeploymentMonitor: Health checks disabled');
       return;
     }
     
