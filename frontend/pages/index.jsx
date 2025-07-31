@@ -10,11 +10,21 @@ import PackageManager from "../components/PackageManager";
 import LivePreview from "../components/LivePreview";
 import FileUpload from "../components/FileUpload";
 import ChatHistory from "../components/ChatHistory";
+import QuickActions from "../components/QuickActions";
+import WorkspaceEnhancements from "../components/WorkspaceEnhancements";
 
 // Dynamic imports for auto features to prevent SSR issues
 const AutoMonitoringDashboard = dynamic(() => import("../components/AutoMonitoringDashboard"), {
   ssr: false,
   loading: () => <div className="p-4 text-center text-slate-400">Loading Monitoring...</div>
+});
+const MiniMap = dynamic(() => import("../components/MiniMap"), {
+  ssr: false,
+  loading: () => null
+});
+const FloatingToolbar = dynamic(() => import("../components/FloatingToolbar"), {
+  ssr: false,
+  loading: () => null
 });
 
 // Dynamic import to prevent SSR issues
@@ -111,6 +121,9 @@ export default function ModernCodespace() {
   const [currentChatSession, setCurrentChatSession] = useState(null);
   const [autoFormatEnabled, setAutoFormatEnabled] = useState(true);
   const [systemHealth, setSystemHealth] = useState(100);
+  const [showShortcutsHelp, setShowShortcutsHelp] = useState(false);
+  const [showFloatingToolbar, setShowFloatingToolbar] = useState(true);
+  const [isCodeRunning, setIsCodeRunning] = useState(false);
 
   // Initialize auto-save functionality
   const { queueFileChange, saveSession, restoreSession, getSaveStatus, clearSession } = useAutoSave(
@@ -227,6 +240,33 @@ export default function ModernCodespace() {
         const panels = ['files', 'editor', 'terminal'];
         setActivePanel(panels[parseInt(e.key) - 1]);
       }
+      // New file
+      if ((e.metaKey || e.ctrlKey) && e.key === 'n') {
+        e.preventDefault();
+        handleFileAdd();
+      }
+      // Duplicate file
+      if ((e.metaKey || e.ctrlKey) && e.key === 'd') {
+        e.preventDefault();
+        if (selected) {
+          const newName = selected.replace(/(\.[^.]+)?$/, '-copy$1');
+          handleFileAdd(newName);
+        }
+      }
+      // Show shortcuts help
+      if (e.key === 'F1') {
+        e.preventDefault();
+        setShowShortcutsHelp(true);
+      }
+      // Format code
+      if (e.shiftKey && e.altKey && e.key === 'F') {
+        e.preventDefault();
+        if (selected && autoFormatter) {
+          const formatted = autoFormatter.format(selected, files[selected]);
+          setFiles(f => ({ ...f, [selected]: formatted }));
+          showNotification('Code formatted', 'success');
+        }
+      }
     };
 
     window.addEventListener('keydown', handleKeyDown);
@@ -285,28 +325,47 @@ export default function ModernCodespace() {
 
   function handleFileAdd(name, folder = null) {
     try {
-      let finalName = name || prompt("File name:");
-      if (!finalName || !finalName.trim()) return;
+      // Generate smart default name if not provided
+      let finalName = name;
+      if (!finalName) {
+        const existingFiles = Object.keys(files);
+        const folderFiles = folder ? existingFiles.filter(f => f.startsWith(`${folder}/`)) : existingFiles;
+        const defaultExt = '.jsx'; // Smart default based on project
+        let counter = 1;
+        do {
+          finalName = `new-file-${counter}${defaultExt}`;
+          counter++;
+        } while (folderFiles.includes(folder ? `${folder}/${finalName}` : finalName));
+      }
 
+      if (!finalName.trim()) return;
       finalName = finalName.trim();
 
-      // Validate filename
-      if (!/^[a-zA-Z0-9_.-]+$/.test(finalName)) {
-        showNotification("File name can only contain letters, numbers, underscores, dots, and hyphens", 'error');
-        return;
+      // Auto-add extension if missing
+      if (!finalName.includes('.')) {
+        finalName += '.jsx'; // Smart default
       }
 
       if (folder) finalName = `${folder}/${finalName}`;
 
       if (files[finalName]) {
-        showNotification("File already exists!", 'error');
-        return;
+        // Auto-increment if exists
+        const baseName = finalName.replace(/\.[^/.]+$/, "");
+        const ext = finalName.match(/\.[^/.]+$/)?.[0] || '';
+        let counter = 1;
+        let newName;
+        do {
+          newName = `${baseName}-${counter}${ext}`;
+          counter++;
+        } while (files[newName]);
+        finalName = newName;
       }
 
       smartFileCreation(finalName, files, setFiles, setSelected, showNotification, setOpenTabs);
       if (folder && !expandedFolders.includes(folder)) {
         setExpandedFolders(prev => [...prev, folder]);
       }
+      showNotification(`Created ${finalName}`, 'success');
     } catch (error) {
       showNotification("Failed to create file", 'error');
     }
@@ -323,9 +382,9 @@ export default function ModernCodespace() {
         const folderName = name.replace('folder:', '');
         const filesToDelete = Object.keys(files).filter(f => f.startsWith(`${folderName}/`));
 
+        // Direct delete for folders - just show notification
         if (filesToDelete.length > 0) {
-          const confirmDelete = window.confirm(`This will delete ${filesToDelete.length} files in "${folderName}". Continue?`);
-          if (!confirmDelete) return;
+          showNotification(`Deleted folder "${folderName}" with ${filesToDelete.length} files`, 'info');
         }
 
         const newFiles = { ...files };
@@ -356,7 +415,7 @@ export default function ModernCodespace() {
         setFiles(rest);
         setOpenTabs(prev => prev.filter(tab => tab !== name));
         setSelected(selected === name ? Object.keys(rest)[0] : selected);
-        showNotification(`File "${name}" deleted`, 'success');
+        showNotification(`Deleted ${name}`, 'success');
       }
     } catch (error) {
       showNotification("Failed to delete file/folder", 'error');
@@ -384,9 +443,24 @@ export default function ModernCodespace() {
   }
 
   function handleAddFolder(folderName) {
+    // Generate smart default name if not provided
+    if (!folderName) {
+      let counter = 1;
+      do {
+        folderName = `new-folder-${counter}`;
+        counter++;
+      } while (folders.includes(folderName));
+    }
+
     if (folders.includes(folderName)) {
-      showNotification('Folder already exists!', 'error');
-      return;
+      // Auto-increment if exists
+      let counter = 1;
+      let newName;
+      do {
+        newName = `${folderName}-${counter}`;
+        counter++;
+      } while (folders.includes(newName));
+      folderName = newName;
     }
 
     // Handle nested folders
@@ -404,7 +478,7 @@ export default function ModernCodespace() {
     if (newFolders.length > 0) {
       setFolders(prev => [...prev, ...newFolders].sort());
       setExpandedFolders(prev => [...prev, ...newFolders]);
-      showNotification(`Folder "${folderName}" created`, 'success');
+      showNotification(`Created folder "${folderName}"`, 'success');
     }
   }
 
@@ -677,21 +751,20 @@ export default function ModernCodespace() {
             {darkMode ? <HiSun className="w-4 h-4" /> : <HiMoon className="w-4 h-4" />}
           </button>
           
-          {/* Auto Format Toggle */}
-          <button
-            onClick={() => {
-              setAutoFormatEnabled(!autoFormatEnabled);
-              showNotification(autoFormatEnabled ? 'Auto-format disabled' : 'Auto-format enabled', 'info');
-            }}
-            className={`px-3 py-1.5 text-xs rounded-xl transition-all ${
-              autoFormatEnabled
-                ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30'
-                : darkMode ? 'bg-slate-700 text-slate-400' : 'bg-gray-200 text-gray-600'
-            }`}
-            title="Auto Format"
-          >
-            AUTO
-          </button>
+          {/* Workspace Settings */}
+          <WorkspaceEnhancements
+            darkMode={darkMode}
+            setDarkMode={setDarkMode}
+            minimap={minimap}
+            setMinimap={setMinimap}
+            wordWrap={wordWrap}
+            setWordWrap={setWordWrap}
+            fontSize={fontSize}
+            setFontSize={setFontSize}
+            autoFormat={autoFormatEnabled}
+            setAutoFormat={setAutoFormatEnabled}
+            showNotification={showNotification}
+          />
           
           {/* System Health Indicator */}
           <div className={`hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl border ${
@@ -786,18 +859,47 @@ export default function ModernCodespace() {
       <div className="flex flex-1 overflow-hidden">
         {/* Desktop Layout */}
         <div className="hidden lg:flex w-full">
-          {/* Sidebar */}
-          <div className={`${sidebarCollapsed ? 'w-16' : 'w-80'} bg-slate-900/50 backdrop-blur border-r border-slate-700/50 transition-all duration-300`}>
-            <div className="flex items-center justify-between p-4 border-b border-slate-700/50">
+          {/* Enhanced Sidebar */}
+          <div className={`${sidebarCollapsed ? 'w-16' : 'w-80'} bg-gradient-to-b from-slate-900/80 via-slate-900/60 to-slate-900/80 backdrop-blur-xl border-r border-gradient-to-b from-slate-700/30 via-slate-600/20 to-slate-700/30 transition-all duration-500 ease-out shadow-2xl`}>
+            <div className="flex items-center justify-between p-6 border-b border-slate-700/30 bg-gradient-to-r from-slate-800/50 to-slate-900/50">
               <div className={`${sidebarCollapsed ? 'hidden' : 'block'}`}>
-                <h2 className="text-white font-semibold text-sm">Explorer</h2>
-                <p className="text-slate-400 text-xs">{Object.keys(files).length} files</p>
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="p-2 bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-lg border border-blue-500/30">
+                    <HiFolderOpen className="w-4 h-4 text-blue-400" />
+                  </div>
+                  <h2 className="text-white font-bold text-base">Project Explorer</h2>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4 text-xs">
+                    <span className="text-slate-300">{Object.keys(files).length} files</span>
+                    <span className="text-slate-500">•</span>
+                    <span className="text-slate-300">{folders.length} folders</span>
+                  </div>
+                  <QuickActions
+                    files={files}
+                    selected={selected}
+                    onFileAdd={handleFileAdd}
+                    onFolderAdd={handleAddFolder}
+                    onDownload={handleDownloadFile}
+                    onUpload={() => {}}
+                    showNotification={showNotification}
+                    onRunCode={() => setShowCodeRunner(true)}
+                    onFormatCode={() => {
+                      if (selected && autoFormatter) {
+                        const formatted = autoFormatter.format(selected, files[selected]);
+                        setFiles(f => ({ ...f, [selected]: formatted }));
+                        showNotification('Code formatted', 'success');
+                      }
+                    }}
+                  />
+                </div>
               </div>
               <button
                 onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                className="p-2 text-slate-400 hover:text-white hover:bg-slate-700/50 rounded-lg transition-all"
+                className="p-2.5 text-slate-400 hover:text-white hover:bg-slate-700/60 rounded-xl transition-all duration-300 transform hover:scale-110"
+                title={sidebarCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
               >
-                <HiSquares2X2 className="w-3.5 h-3.5" />
+                <HiSquares2X2 className={`w-4 h-4 transition-transform duration-300 ${sidebarCollapsed ? 'rotate-180' : ''}`} />
               </button>
             </div>
             
@@ -819,8 +921,8 @@ export default function ModernCodespace() {
             )}
           </div>
 
-          {/* Editor */}
-          <div className="flex-1 bg-slate-900/30 flex flex-col">
+          {/* Enhanced Editor Area */}
+          <div className="flex-1 bg-gradient-to-br from-slate-900/20 via-slate-800/10 to-slate-900/30 flex flex-col backdrop-blur-sm">
             {/* Tab Bar */}
             <TabBar
               openTabs={openTabs}
@@ -832,7 +934,48 @@ export default function ModernCodespace() {
 
             {/* Editor Content */}
             <div className="flex-1 flex flex-col">
-              <div className="flex-1">
+              <div className="flex-1 relative">
+                {/* Floating Toolbar */}
+                {showFloatingToolbar && (
+                  <FloatingToolbar
+                    selected={selected}
+                    files={files}
+                    onRunCode={() => setShowCodeRunner(true)}
+                    onFormatCode={() => {
+                      if (selected && autoFormatter) {
+                        const formatted = autoFormatter.format(selected, files[selected]);
+                        setFiles(f => ({ ...f, [selected]: formatted }));
+                        showNotification('Code formatted', 'success');
+                      }
+                    }}
+                    onDuplicateFile={() => {
+                      if (selected) {
+                        const newName = selected.replace(/(\.[^.]+)?$/, '-copy$1');
+                        handleFileAdd(newName);
+                      }
+                    }}
+                    onSearch={() => showNotification('Search: Ctrl+F in editor', 'info')}
+                    showPreview={showLivePreview}
+                    setShowPreview={setShowLivePreview}
+                    isRunning={isCodeRunning}
+                    setIsRunning={setIsCodeRunning}
+                    showNotification={showNotification}
+                  />
+                )}
+                
+                {/* Minimap */}
+                {minimap && selected && (
+                  <MiniMap
+                    content={files[selected] || ''}
+                    language={getLang(selected)}
+                    visible={minimap}
+                    onScroll={(percentage) => {
+                      // Scroll to position in editor
+                      showNotification(`Scrolled to ${Math.round(percentage * 100)}%`, 'info');
+                    }}
+                  />
+                )}
+                
                 {selected ? (
                   enhancedEditorEnabled ? (
                     <EnhancedEditorPanel
@@ -881,23 +1024,21 @@ export default function ModernCodespace() {
             </div>
           </div>
 
-          {/* Chat Panel */}
-          <div className="w-96 bg-slate-900/50 backdrop-blur border-l border-slate-700/50">
-            <div className="flex items-center justify-between p-4 border-b border-slate-700/50">
-              <div className="flex items-center gap-1 bg-slate-800/50 rounded-lg p-1">
-                <button
-                  onClick={() => {
-                    setActivePanel('terminal');
-                  }}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all ${
-                    activePanel === 'terminal'
-                      ? 'bg-blue-500 text-white'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  <HiCommandLine className="w-3.5 h-3.5" />
-                  Chat AI
-                </button>
+          {/* Enhanced Chat Panel */}
+          <div className="w-96 bg-gradient-to-b from-slate-900/70 via-slate-900/50 to-slate-900/70 backdrop-blur-xl border-l border-gradient-to-b from-slate-700/40 via-slate-600/20 to-slate-700/40 shadow-2xl">
+            <div className="flex items-center justify-between p-6 border-b border-slate-700/30 bg-gradient-to-r from-slate-800/60 to-slate-900/40">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-xl border border-blue-500/30">
+                  <HiSparkles className="w-4 h-4 text-blue-400" />
+                </div>
+                <div>
+                  <h3 className="text-white font-bold text-base">AI Assistant</h3>
+                  <p className="text-slate-400 text-xs">Claude 4 • Real-time coding help</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                <span className="text-xs text-green-400 font-medium">Online</span>
               </div>
             </div>
 
@@ -1060,6 +1201,54 @@ export default function ModernCodespace() {
         onClose={() => setShowMonitoringDashboard(false)}
         showNotification={showNotification}
       />
+      
+      {/* Keyboard Shortcuts Help */}
+      {showShortcutsHelp && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-900 rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden">
+            <div className="p-6 border-b border-slate-700">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-bold text-white">Keyboard Shortcuts</h3>
+                <button
+                  onClick={() => setShowShortcutsHelp(false)}
+                  className="p-1 hover:bg-slate-700 text-slate-400 hover:text-white rounded transition-colors"
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+            <div className="p-6 max-h-96 overflow-y-auto">
+              <div className="grid grid-cols-1 gap-4">
+                {[
+                  { key: 'Ctrl + N', action: 'New File' },
+                  { key: 'Ctrl + D', action: 'Duplicate File' },
+                  { key: 'Ctrl + P', action: 'Command Palette' },
+                  { key: 'Ctrl + B', action: 'Toggle Sidebar' },
+                  { key: 'Ctrl + 1/2/3', action: 'Switch Panels' },
+                  { key: 'Shift + Alt + F', action: 'Format Code' },
+                  { key: 'F1', action: 'Show Shortcuts' },
+                  { key: 'F5', action: 'Run Code' }
+                ].map((shortcut, index) => (
+                  <div key={index} className="flex items-center justify-between py-2 px-3 bg-slate-800/50 rounded-lg">
+                    <span className="text-slate-300 text-sm">{shortcut.action}</span>
+                    <kbd className="px-2 py-1 bg-slate-700 text-slate-300 rounded text-xs font-mono">
+                      {shortcut.key}
+                    </kbd>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="p-4 border-t border-slate-700 bg-slate-800/50">
+              <button
+                onClick={() => setShowShortcutsHelp(false)}
+                className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+              >
+                Got it!
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Live Preview Modal */}
       <LivePreview
