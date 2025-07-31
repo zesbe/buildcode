@@ -223,11 +223,19 @@ export default function ChatHistory({ isOpen, onClose, onSwitchChat, currentSess
                       <div className="flex items-center gap-3 text-xs text-slate-400">
                         <span>{session.messages.length} messages</span>
                         <span>•</span>
-                        <span>{session.updatedAt ? new Date(session.updatedAt).toLocaleDateString() : '--'}</span>
+                        <span>{session.updatedAt ? (() => {
+                          try {
+                            const date = new Date(session.updatedAt);
+                            return isNaN(date.getTime()) ? '--' : date.toLocaleDateString();
+                          } catch (e) {
+                            return '--';
+                          }
+                        })() : '--'}</span>
                         <span>•</span>
                         <span>{session.updatedAt ? (() => {
                           try {
-                            return new Date(session.updatedAt).toLocaleTimeString();
+                            const date = new Date(session.updatedAt);
+                            return isNaN(date.getTime()) ? '--:--' : date.toLocaleTimeString();
                           } catch (e) {
                             return '--:--';
                           }
