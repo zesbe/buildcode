@@ -232,7 +232,7 @@ export default function AutoMonitoringDashboard({ isOpen, onClose, showNotificat
                       <div className="flex-1">
                         <div className="text-sm text-white">{alert.message}</div>
                         <div className="text-xs text-slate-400">
-                          {new Date(alert.timestamp).toLocaleTimeString()}
+                          {alert.timestamp ? new Date(alert.timestamp).toLocaleTimeString() : '--:--'}
                         </div>
                       </div>
                     </div>

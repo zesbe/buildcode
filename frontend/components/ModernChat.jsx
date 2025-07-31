@@ -131,10 +131,17 @@ export default function TerminalStyleChat({ files, setFiles, selected, setSelect
   };
 
   const formatTime = (timestamp) => {
-    return timestamp.toLocaleTimeString('id-ID', { 
-      hour: '2-digit', 
-      minute: '2-digit'
-    });
+    try {
+      // Ensure timestamp is a Date object
+      const date = timestamp instanceof Date ? timestamp : new Date(timestamp);
+      return date.toLocaleTimeString('id-ID', { 
+        hour: '2-digit', 
+        minute: '2-digit'
+      });
+    } catch (error) {
+      console.warn('Invalid timestamp:', timestamp, error);
+      return '--:--';
+    }
   };
 
   return (

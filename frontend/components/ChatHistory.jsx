@@ -223,9 +223,9 @@ export default function ChatHistory({ isOpen, onClose, onSwitchChat, currentSess
                       <div className="flex items-center gap-3 text-xs text-slate-400">
                         <span>{session.messages.length} messages</span>
                         <span>•</span>
-                        <span>{new Date(session.updatedAt).toLocaleDateString()}</span>
+                        <span>{session.updatedAt ? new Date(session.updatedAt).toLocaleDateString() : '--'}</span>
                         <span>•</span>
-                        <span>{new Date(session.updatedAt).toLocaleTimeString()}</span>
+                        <span>{session.updatedAt ? new Date(session.updatedAt).toLocaleTimeString() : '--:--'}</span>
                       </div>
                     </div>
                     
