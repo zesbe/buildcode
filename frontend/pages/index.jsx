@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
+import dynamic from "next/dynamic";
 import FileExplorer from "../components/FileExplorer";
 import EditorPanel from "../components/EditorPanel";
 import EnhancedEditorPanel from "../components/EnhancedEditorPanel";
@@ -8,7 +9,12 @@ import TabBar from "../components/TabBar";
 import PackageManager from "../components/PackageManager";
 import LivePreview from "../components/LivePreview";
 import FileUpload from "../components/FileUpload";
-import CodeRunner from "../components/CodeRunner";
+
+// Dynamic import to prevent SSR issues
+const CodeRunner = dynamic(() => import("../components/CodeRunner"), {
+  ssr: false,
+  loading: () => <div className="p-4 text-center text-slate-400">Loading Code Runner...</div>
+});
 // import CommandPalette from "../components/CommandPalette";
 import { parseAICommand, executeAICommands } from "../utils/aiFileActions";
 import { smartFileCreation } from "../utils/advancedFileOperations";
@@ -37,7 +43,7 @@ import {
   HiCheck,
   HiArrowDownTray,
   HiArrowUpTray,
-  HiTemplate,
+  HiSquares2X2 as HiTemplate,
   HiRocketLaunch
 } from "react-icons/hi2";
 
