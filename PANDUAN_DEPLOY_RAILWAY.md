@@ -24,7 +24,7 @@ Proyek ini adalah aplikasi Chat AI dengan arsitektur terpisah:
 #### Step 1: Setup Backend
 1. Login ke [Railway Dashboard](https://railway.app/dashboard)
 2. Klik **"New Project"** → **"Deploy from GitHub repo"**
-3. Pilih repository `zesbe/chat-ai-percobaan`
+3. Pilih repository `zesbe/buildcode`
 4. Railway akan otomatis detect struktur project
 
 #### Step 2: Konfigurasi Backend Service
@@ -44,9 +44,9 @@ Proyek ini adalah aplikasi Chat AI dengan arsitektur terpisah:
 3. Set **Root Directory** ke `/frontend`
 4. Di tab **"Variables"**, tambahkan:
    ```
-   NEXT_PUBLIC_API_URL=https://your-backend-service.railway.app
    NODE_ENV=production
    ```
+   **Note**: Frontend tidak perlu `NEXT_PUBLIC_API_URL` karena menggunakan API routes sendiri.
 
 ### Opsi 2: Deploy via Railway CLI
 
@@ -118,6 +118,8 @@ buildCommand = "npm install && npm run build"
 startCommand = "npm start"
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 10
+healthcheckPath = "/"
+healthcheckTimeout = 30
 
 [[services]]
 name = "frontend"
@@ -125,24 +127,20 @@ port = 3000
 
 [environments.production]
 NODE_ENV = "production"
+# Frontend will use its own API routes, not external backend
 ```
 
-## 🔗 Connecting Frontend ke Backend
+## 🔗 Architecture & API Structure
 
-### Automatic Service Connection
-Railway otomatis menyediakan internal networking. Frontend dapat mengakses backend menggunakan:
+### Frontend Independence
+Frontend memiliki API routes sendiri dan **tidak bergantung** pada backend service:
+- Frontend API: `/api/claude`, `/api/claude-stream`
+- Backend API: `/api/health`, `/api/chat`, `/api/github/*`
 
-```javascript
-// Di environment variables frontend
-NEXT_PUBLIC_API_URL=https://your-backend-service.railway.app
-```
-
-### Manual Configuration
-Jika perlu configure manual:
-
-1. Copy backend service URL dari Railway dashboard
-2. Set di frontend environment variables
-3. Update file konfigurasi jika diperlukan
+### Service Communication
+Frontend dan backend dapat di-deploy secara **independen**:
+- Frontend: Complete UI dengan API integration
+- Backend: Optional service untuk additional features
 
 ## ✅ Verifikasi Deployment
 
@@ -165,25 +163,39 @@ curl -X POST https://your-backend-service.railway.app/api/chat \
 ### 3. Frontend Access
 Akses frontend di: `https://your-frontend-service.railway.app`
 
+**⚠️ Important**: 
+- Frontend memiliki API endpoints sendiri dan tidak bergantung pada backend service
+- Jika Anda mengakses `/api/*` endpoint di frontend, akan melihat respons JSON (normal)
+- Halaman utama `/` akan menampilkan UI yang lengkap
+- Frontend dapat berfungsi sepenuhnya tanpa backend service
+
 ## 🛠️ Troubleshooting
 
 ### Common Issues
 
-#### 1. Build Failures
+#### 1. Frontend Menampilkan JSON Response
+**Masalah**: Mengakses `/api` endpoint menampilkan JSON bukan UI
+**Solusi**: 
+- Akses halaman utama `/` untuk UI lengkap
+- Endpoint `/api/*` memang mengembalikan JSON response
+- Frontend routing bekerja dengan benar
+
+#### 2. Build Failures
 ```bash
 # Check logs
 railway logs --service backend
 railway logs --service frontend
 ```
 
-#### 2. Environment Variables Missing
-- Pastikan `ANTHROPIC_API_KEY` sudah diset
+#### 3. Environment Variables Missing
+- Backend: Pastikan `ANTHROPIC_API_KEY` sudah diset
+- Frontend: Tidak perlu environment variables khusus
 - Check di Railway Dashboard → Service → Variables
 
-#### 3. CORS Issues
+#### 4. CORS Issues
 Backend sudah dikonfigurasi untuk menerima request dari frontend Railway domain.
 
-#### 4. Port Configuration
+#### 5. Port Configuration
 - Backend: Port 3002 (configured di railway.toml)
 - Frontend: Port 3000 (Next.js default)
 - Railway automatically handles port mapping
@@ -215,7 +227,8 @@ railway logs --service frontend --tail
 Check di Railway Dashboard → Service → Metrics
 
 ### 3. Health Monitoring
-Backend memiliki health check endpoint di `/api/health` yang secara otomatis dimonitor Railway.
+- Backend: Health check endpoint di `/api/health`
+- Frontend: Health check di `/` (home page)
 
 ## 💰 Estimasi Biaya
 
@@ -225,7 +238,8 @@ Backend memiliki health check endpoint di `/api/health` yang secara otomatis dim
 - Resource usage billing setelah free tier
 
 ### Optimasi Biaya
-- Gunakan single service dengan monorepo structure jika memungkinkan
+- Frontend saja sudah cukup untuk basic functionality
+- Backend optional untuk advanced features
 - Monitor resource usage di dashboard
 - Set up auto-sleep untuk development environments
 
@@ -248,23 +262,28 @@ Railway otomatis re-deploy ketika ada push ke main branch.
 Jika mengalami masalah:
 1. Check Railway logs first
 2. Verify environment variables
-3. Check [Railway documentation](https://docs.railway.app)
-4. Contact Railway support via dashboard
+3. Pastikan akses halaman utama `/` untuk UI
+4. Check [Railway documentation](https://docs.railway.app)
+5. Contact Railway support via dashboard
 
 ---
 
 ## ⚡ Quick Start Summary
 
-1. **Fork/Clone** repository
+1. **Fork/Clone** repository dari `https://github.com/zesbe/buildcode`
 2. **Setup Railway** project dari GitHub repo
 3. **Configure** environment variables:
    - Backend: `ANTHROPIC_API_KEY`
-   - Frontend: `NEXT_PUBLIC_API_URL`
+   - Frontend: (tidak perlu env vars)
 4. **Deploy** otomatis via Railway
-5. **Test** endpoints dan frontend access
+5. **Test**: 
+   - Frontend UI: `https://your-frontend.railway.app/`
+   - Backend API: `https://your-backend.railway.app/api/health`
 
 **Deployment URLs:**
 - Backend API: `https://your-backend-service.railway.app`  
 - Frontend App: `https://your-frontend-service.railway.app`
+
+**Fix untuk masalah JSON response**: Akses `/` bukan `/api` untuk UI lengkap!
 
 Selamat coding! 🎉
