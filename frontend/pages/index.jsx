@@ -75,16 +75,20 @@ import {
 } from "react-icons/hi2";
 import { chatStorage } from "../utils/chatStorage";
 
-// Dynamic imports for auto systems
+// Dynamic imports for auto systems with error handling
 let advancedAutoSave, autoFormatter, autoErrorRecovery, deploymentMonitor;
 if (typeof window !== 'undefined') {
   import('../utils/advancedAutoSave').then(module => {
     advancedAutoSave = module.advancedAutoSave;
     autoFormatter = module.autoFormatter;
+  }).catch(error => {
+    console.warn('Failed to load advancedAutoSave:', error);
   });
   import('../utils/autoErrorRecovery').then(module => {
     autoErrorRecovery = module.autoErrorRecovery;
     deploymentMonitor = module.deploymentMonitor;
+  }).catch(error => {
+    console.warn('Failed to load autoErrorRecovery:', error);
   });
 }
 
@@ -140,67 +144,81 @@ export default function ModernCodespace() {
     };
   }, []);
   
-  // Initialize auto systems
+  // Initialize auto systems with error handling
   const initializeAutoSystems = () => {
     if (typeof window === 'undefined') return;
     
-    // Set up error recovery monitoring
-    const handleErrorRecovered = (event) => {
-      showNotification(`Auto-recovered: ${event.detail.strategy}`, 'success');
-    };
-    
-    const handleDeploymentAlert = (event) => {
-      const alert = event.detail;
-      showNotification(`System Alert: ${alert.message}`, 
-        alert.severity === 'high' ? 'error' : 'warning'
-      );
-    };
-    
-    window.addEventListener('error-recovered', handleErrorRecovered);
-    window.addEventListener('deployment-alert', handleDeploymentAlert);
-    
-    // Update system health periodically
-    const healthInterval = setInterval(() => {
-      if (autoErrorRecovery) {
-        const health = autoErrorRecovery.getHealthScore();
-        setSystemHealth(health);
-        
-        if (health < 50) {
-          showNotification('System health degraded - check monitoring dashboard', 'warning');
+    try {
+      // Set up error recovery monitoring
+      const handleErrorRecovered = (event) => {
+        showNotification(`Auto-recovered: ${event.detail.strategy}`, 'success');
+      };
+      
+      const handleDeploymentAlert = (event) => {
+        const alert = event.detail;
+        showNotification(`System Alert: ${alert.message}`, 
+          alert.severity === 'high' ? 'error' : 'warning'
+        );
+      };
+      
+      window.addEventListener('error-recovered', handleErrorRecovered);
+      window.addEventListener('deployment-alert', handleDeploymentAlert);
+      
+      // Update system health periodically
+      const healthInterval = setInterval(() => {
+        try {
+          if (autoErrorRecovery) {
+            const health = autoErrorRecovery.getHealthScore();
+            setSystemHealth(health);
+            
+            if (health < 50) {
+              showNotification('System health degraded - check monitoring dashboard', 'warning');
+            }
+          }
+        } catch (error) {
+          console.warn('Health check failed:', error);
         }
-      }
-    }, 30000); // Every 30 seconds
-    
-    return () => {
-      clearInterval(healthInterval);
-      window.removeEventListener('error-recovered', handleErrorRecovered);
-      window.removeEventListener('deployment-alert', handleDeploymentAlert);
-    };
+      }, 30000); // Every 30 seconds
+      
+      return () => {
+        clearInterval(healthInterval);
+        window.removeEventListener('error-recovered', handleErrorRecovered);
+        window.removeEventListener('deployment-alert', handleDeploymentAlert);
+      };
+    } catch (error) {
+      console.warn('Failed to initialize auto systems:', error);
+      return () => {}; // Return empty cleanup function
+    }
   };
 
   // Restore session on mount
   useEffect(() => {
-    const restored = restoreSession();
-    if (restored) {
-      showNotification('Session restored! 🔄', 'success');
+    try {
+      const restored = restoreSession();
+      if (restored) {
+        showNotification('Session restored! 🔄', 'success');
+      }
+      
+      // Initialize chat session
+      const sessionId = chatStorage.getCurrentSessionId();
+      setCurrentChatSession(sessionId);
+      
+      // Initialize auto systems
+      initializeAutoSystems();
+      
+      // Restore user preferences
+      const savedDarkMode = localStorage.getItem('darkMode');
+      if (savedDarkMode !== null) setDarkMode(JSON.parse(savedDarkMode));
+      
+      const savedAutoFormat = localStorage.getItem('autoFormat');
+      if (savedAutoFormat !== null) setAutoFormat(JSON.parse(savedAutoFormat));
+      
+      const savedFontSize = localStorage.getItem('fontSize');
+      if (savedFontSize !== null) setFontSize(parseInt(savedFontSize));
+    } catch (error) {
+      console.warn('Failed to initialize application:', error);
+      showNotification('App loaded with reduced functionality', 'warning');
     }
-    
-    // Initialize chat session
-    const sessionId = chatStorage.getCurrentSessionId();
-    setCurrentChatSession(sessionId);
-    
-    // Initialize auto systems
-    initializeAutoSystems();
-    
-    // Restore user preferences
-    const savedDarkMode = localStorage.getItem('darkMode');
-    if (savedDarkMode !== null) setDarkMode(JSON.parse(savedDarkMode));
-    
-    const savedAutoFormat = localStorage.getItem('autoFormat');
-    if (savedAutoFormat !== null) setAutoFormat(JSON.parse(savedAutoFormat));
-    
-    const savedFontSize = localStorage.getItem('fontSize');
-    if (savedFontSize !== null) setFontSize(parseInt(savedFontSize));
   }, []);
 
   // Save preferences
