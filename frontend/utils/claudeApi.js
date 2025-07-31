@@ -8,10 +8,8 @@ export async function chatClaude({ messages, model = 'claude-sonnet-4-20250514',
   }
   
   try {
-    // Use Netlify Functions in production, local API in development
-    const apiUrl = process.env.NODE_ENV === 'production' 
-      ? '/.netlify/functions/claude'
-      : '/api/claude';
+    // Use Railway API routes for both production and development
+    const apiUrl = '/api/claude';
       
     const response = await fetch(apiUrl, {
       method: 'POST',

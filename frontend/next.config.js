@@ -24,15 +24,6 @@ const nextConfig = {
       },
     ];
   },
-  // Add rewrites to handle potential routing conflicts
-  async rewrites() {
-    return [
-      {
-        source: '/',
-        destination: '/index',
-      }
-    ];
-  },
 }
 
 module.exports = nextConfig
